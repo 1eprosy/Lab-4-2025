@@ -1,449 +1,373 @@
-import functions.*;
 import functions.basic.*;
+import functions.*;
 import functions.meta.*;
+
 import java.io.*;
-import java.text.DecimalFormat;
+import java.util.Locale;
 
 public class Main {
-    private static final DecimalFormat df = new DecimalFormat("#0.0000");
-
     public static void main(String[] args) {
-        System.out.println("=== Тестирование сериализации табулированных функций ===\n");
+        System.out.println("=== ТЕСТИРОВАНИЕ КЛАССОВ ФУНКЦИЙ ===\n");
 
         try {
-            // Тестирование Serializable
-            System.out.println("1. Тестирование Serializable (стандартная сериализация Java):");
-            testSerializable();
+            // Часть 1: Sin и Cos
+            System.out.println("1. Тестирование Sin и Cos:");
+            System.out.println("==========================");
+            testSinCos();
 
-            // Тестирование Externalizable
-            System.out.println("\n2. Тестирование Externalizable (ручная сериализация):");
-            testExternalizable();
+            // Часть 2: Табулированные аналоги
+            System.out.println("\n2. Табулированные аналоги Sin и Cos:");
+            System.out.println("====================================");
+            testTabulatedSinCos();
 
-            // Сравнение форматов
-            System.out.println("\n3. Сравнение Serializable и Externalizable:");
-            compareSerializationFormats();
+            // Часть 3: Сумма квадратов
+            System.out.println("\n3. Сумма квадратов табулированных функций:");
+            System.out.println("==========================================");
+            testSumOfSquares();
 
-            System.out.println("\n=== Все тесты завершены успешно ===");
+            // Часть 4: Экспонента с записью в файл
+            System.out.println("\n4. Тестирование экспоненты с записью в файл:");
+            System.out.println("===========================================");
+            testExpWithFile();
+
+            // Часть 5: Логарифм с записью в файл
+            System.out.println("\n5. Тестирование логарифма с записью в файл:");
+            System.out.println("===========================================");
+            testLnWithFile();
+
+            // Часть 6: Сериализация (задание 9)
+            System.out.println("\n6. Тестирование сериализации (задание 9):");
+            System.out.println("==========================================");
+            testSerialization();
 
         } catch (Exception e) {
-            System.err.println("Ошибка при тестировании: " + e.getMessage());
+            System.err.println("Ошибка: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Тестирование Serializable
-     */
-    private static void testSerializable() throws Exception {
-        System.out.println("   Создание функции ln(exp(x)) = x на отрезке [0, 10] с 11 точками...");
+    private static void testSinCos() {
+        Sin sinFunc = new Sin();
+        Cos cosFunc = new Cos();
 
-        // Создаем базовые функции
-        Function exp = new Exp();
-        Function log = new Log(Math.E);
+        System.out.println("sin(x) и cos(x) на отрезке [0, π] с шагом 0.1:");
+        System.out.printf("%-10s %-15s %-15s%n", "x", "sin(x)", "cos(x)");
+        System.out.println("------------------------------------------------");
 
-        // Создаем композицию: ln(exp(x))
-        Function lnOfExp = Functions.composition(log, exp);
+        for (double x = 0; x <= Math.PI + 1e-10; x += 0.1) {
+            System.out.printf(Locale.US, "%-10.4f %-15.10f %-15.10f%n",
+                    x, sinFunc.getFunctionValue(x), cosFunc.getFunctionValue(x));
+        }
+    }
 
-        // Табулируем функцию - ln(exp(x)) должно быть равно x
-        TabulatedFunction tabulatedFunc = TabulatedFunctions.tabulate(lnOfExp, 0, 10, 11);
+    private static void testTabulatedSinCos() {
+        Sin sinFunc = new Sin();
+        Cos cosFunc = new Cos();
 
-        System.out.println("   Исходная функция (должна быть f(x) = x):");
-        printFunctionValues(tabulatedFunc, 0, 10, 1);
+        // Создаем табулированные функции с 10 точками
+        TabulatedFunction tabSin = TabulatedFunctions.tabulate(sinFunc, 0, Math.PI, 10);
+        TabulatedFunction tabCos = TabulatedFunctions.tabulate(cosFunc, 0, Math.PI, 10);
 
-        // Проверяем, что функция действительно f(x) = x
-        System.out.println("   Проверка тождества ln(exp(x)) = x:");
-        boolean isIdentity = true;
+        System.out.println("Сравнение точных и табулированных значений:");
+        System.out.printf("%-10s %-15s %-15s %-15s %-15s%n",
+                "x", "sin(x) точн.", "sin(x) таб.", "cos(x) точн.", "cos(x) таб.");
+        System.out.println("------------------------------------------------------------------------");
+
+        for (double x = 0; x <= Math.PI + 1e-10; x += 0.1) {
+            double sinExact = sinFunc.getFunctionValue(x);
+            double cosExact = cosFunc.getFunctionValue(x);
+            double sinTab = tabSin.getFunctionValue(x);
+            double cosTab = tabCos.getFunctionValue(x);
+
+            System.out.printf(Locale.US, "%-10.4f %-15.10f %-15.10f %-15.10f %-15.10f%n",
+                    x, sinExact, sinTab, cosExact, cosTab);
+        }
+
+        // Вычисление погрешностей
+        System.out.println("\nМаксимальные погрешности:");
+        double maxSinError = 0;
+        double maxCosError = 0;
+
+        for (double x = 0; x <= Math.PI + 1e-10; x += 0.1) {
+            double sinError = Math.abs(sinFunc.getFunctionValue(x) - tabSin.getFunctionValue(x));
+            double cosError = Math.abs(cosFunc.getFunctionValue(x) - tabCos.getFunctionValue(x));
+
+            if (sinError > maxSinError) maxSinError = sinError;
+            if (cosError > maxCosError) maxCosError = cosError;
+        }
+
+        System.out.printf("sin: %.10f%n", maxSinError);
+        System.out.printf("cos: %.10f%n", maxCosError);
+    }
+
+    private static void testSumOfSquares() {
+        System.out.println("sin²(x) + cos²(x) должна быть равна 1 (теоретически)");
+        System.out.println("Исследование влияния количества точек табуляции:");
+        System.out.println("=================================================");
+
+        int[] pointCounts = {5, 10, 20, 50, 100};
+
+        for (int points : pointCounts) {
+            System.out.printf("\nКоличество точек табуляции: %d%n", points);
+            System.out.printf("%-10s %-15s %-15s%n", "x", "sin²+cos²", "погрешность");
+            System.out.println("----------------------------------------");
+
+            // Создаем табулированные функции
+            TabulatedFunction tabSin = TabulatedFunctions.tabulate(new Sin(), 0, Math.PI, points);
+            TabulatedFunction tabCos = TabulatedFunctions.tabulate(new Cos(), 0, Math.PI, points);
+
+            // Создаем квадраты функций
+            Function sinSquared = Functions.power(tabSin, 2);
+            Function cosSquared = Functions.power(tabCos, 2);
+
+            // Сумма квадратов
+            Function sum = Functions.sum(sinSquared, cosSquared);
+
+            double maxError = 0;
+            for (double x = 0; x <= Math.PI + 1e-10; x += 0.1) {
+                double value = sum.getFunctionValue(x);
+                double error = Math.abs(value - 1.0); // Теоретическое значение: 1
+
+                if (error > maxError) maxError = error;
+
+                // Выводим только некоторые точки для наглядности
+                if (Math.abs(x - 0) < 1e-10 || Math.abs(x - Math.PI/2) < 1e-10 ||
+                        Math.abs(x - Math.PI) < 1e-10) {
+                    System.out.printf(Locale.US, "%-10.4f %-15.10f %-15.10f%n",
+                            x, value, error);
+                }
+            }
+
+            System.out.printf("Максимальная погрешность: %.10f%n", maxError);
+        }
+    }
+
+    private static void testExpWithFile() throws IOException {
+        // Создаем табулированный аналог экспоненты
+        Exp expFunc = new Exp();
+        TabulatedFunction tabExp = TabulatedFunctions.tabulate(expFunc, 0, 10, 11);
+
+        // Записываем в файл
+        String filename1 = "exp_function.txt";
+        try (FileWriter writer = new FileWriter(filename1)) {
+            TabulatedFunctions.writeTabulatedFunction(tabExp, writer);
+        }
+
+        System.out.println("Функция записана в файл: " + filename1);
+
+        // Читаем из файла
+        TabulatedFunction readExp;
+        try (FileReader reader = new FileReader(filename1)) {
+            readExp = TabulatedFunctions.readTabulatedFunction(reader);
+        }
+
+        System.out.println("\nСравнение исходной и считанной экспоненты:");
+        System.out.printf("%-10s %-20s %-20s %-10s%n",
+                "x", "исходная exp(x)", "считанная", "разница");
+        System.out.println("----------------------------------------------------------------");
+
         for (double x = 0; x <= 10; x += 1) {
-            double value = tabulatedFunc.getFunctionValue(x);
-            double diff = Math.abs(value - x);
-            if (diff > 1e-10) {
-                isIdentity = false;
-                System.out.printf("   Ошибка при x=%.1f: ln(exp(%.1f)) = %.6f (ожидалось %.1f)%n",
-                        x, x, value, x);
+            double original = tabExp.getFunctionValue(x);
+            double read = readExp.getFunctionValue(x);
+            double diff = Math.abs(original - read);
+
+            System.out.printf(Locale.US, "%-10.0f %-20.10f %-20.10f %-10.10f%n",
+                    x, original, read, diff);
+        }
+
+        // Изучаем содержимое файла
+        System.out.println("\nСодержимое файла " + filename1 + ":");
+        try (BufferedReader br = new BufferedReader(new FileReader(filename1))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
             }
         }
-        if (isIdentity) {
-            System.out.println("   ✓ Тождество ln(exp(x)) = x выполняется!");
-        }
-
-        // Сериализуем в файл
-        String serializableFile = "serializable_function.ser";
-        System.out.println("\n   Сериализация в файл: " + serializableFile);
-
-        try (ObjectOutputStream out = new ObjectOutputStream(
-                new BufferedOutputStream(new FileOutputStream(serializableFile)))) {
-            out.writeObject(tabulatedFunc);
-            System.out.println("   Сериализация завершена успешно");
-        }
-
-        // Десериализуем из файла
-        System.out.println("   Десериализация из файла...");
-        TabulatedFunction deserializedFunc;
-
-        try (ObjectInputStream in = new ObjectInputStream(
-                new BufferedInputStream(new FileInputStream(serializableFile)))) {
-            deserializedFunc = (TabulatedFunction) in.readObject();
-            System.out.println("   Десериализация завершена успешно");
-        }
-
-        System.out.println("   Прочитанная функция:");
-        printFunctionValues(deserializedFunc, 0, 10, 1);
-
-        // Сравниваем функции
-        System.out.println("\n   Сравнение исходной и десериализованной функций:");
-        compareFunctions(tabulatedFunc, deserializedFunc, 0, 10, 1);
-
-        // Анализируем размер файла
-        File file = new File(serializableFile);
-        System.out.println("\n   Анализ файла сериализации:");
-        System.out.println("   Размер файла: " + file.length() + " байт");
-        System.out.println("   Ожидаемый размер: около 485 байт (с метаданными классов)");
-
-        // Показываем начало файла в hex
-        System.out.println("   Первые 32 байта файла (hex) - магическое число Java и имя класса:");
-        showFileHex(serializableFile, 32);
-
-        // Удаляем временный файл
-        file.delete();
-        System.out.println("   Временный файл удален.");
     }
 
-    /**
-     * Тестирование Externalizable
-     */
-    private static void testExternalizable() throws Exception {
-        System.out.println("   Создание функции ln(exp(x)) = x на отрезке [0, 10] с 11 точками...");
+    private static void testLnWithFile() throws IOException {
+        // Создаем табулированный аналог логарифма (начинаем с 1, т.к. ln(0) не определен)
+        Log lnFunc = new Log(Math.E); // натуральный логарифм
+        TabulatedFunction tabLn = TabulatedFunctions.tabulate(lnFunc, 1, 10, 10);
 
-        // Создаем базовые функции
-        Function exp = new Exp();
-        Function log = new Log(Math.E);
-
-        // Создаем композицию: ln(exp(x))
-        Function lnOfExp = Functions.composition(log, exp);
-
-        // Табулируем функцию стандартным способом
-        TabulatedFunction tempFunc = TabulatedFunctions.tabulate(lnOfExp, 0, 10, 11);
-
-        System.out.println("   Проверка функции (должна быть f(x) = x):");
-        for (double x = 0; x <= 10; x += 1) {
-            double value = tempFunc.getFunctionValue(x);
-            System.out.printf("   f(%.1f) = %.6f (ожидается %.1f)%n", x, value, x);
+        // Записываем в бинарный файл
+        String filename2 = "ln_function.bin";
+        try (FileOutputStream fos = new FileOutputStream(filename2)) {
+            TabulatedFunctions.outputTabulatedFunction(tabLn, fos);
         }
 
-        // Создаем Externalizable версию через безопасный конструктор
-        // Сначала собираем точки
-        FunctionPoint[] points = new FunctionPoint[tempFunc.getPointsCount()];
-        System.out.println("\n   Создание массива точек для Externalizable:");
-        for (int i = 0; i < points.length; i++) {
-            double x = tempFunc.getPointX(i);
-            double y = tempFunc.getPointY(i);
-            points[i] = new FunctionPoint(x, y);
-            System.out.printf("   Точка %d: (%.4f, %.4f)%n", i, x, y);
+        System.out.println("\nБинарная функция записана в файл: " + filename2);
+
+        // Читаем из бинарного файла
+        TabulatedFunction readLn;
+        try (FileInputStream fis = new FileInputStream(filename2)) {
+            readLn = TabulatedFunctions.inputTabulatedFunction(fis);
         }
 
-        // Проверяем упорядоченность точек
-        System.out.println("\n   Проверка упорядоченности точек:");
-        boolean isOrdered = true;
-        for (int i = 1; i < points.length; i++) {
-            if (points[i].getX() <= points[i-1].getX()) {
-                isOrdered = false;
-                System.out.printf("   Ошибка: точка %d (x=%.4f) не больше точки %d (x=%.4f)%n",
-                        i, points[i].getX(), i-1, points[i-1].getX());
-            }
-        }
-        if (isOrdered) {
-            System.out.println("   ✓ Все точки упорядочены по возрастанию X");
-        } else {
-            throw new IllegalArgumentException("Точки не упорядочены по X");
+        System.out.println("\nСравнение исходного и считанного логарифма:");
+        System.out.printf("%-10s %-20s %-20s %-10s%n",
+                "x", "исходный ln(x)", "считанный", "разница");
+        System.out.println("----------------------------------------------------------------");
+
+        for (double x = 1; x <= 10; x += 1) {
+            double original = tabLn.getFunctionValue(x);
+            double read = readLn.getFunctionValue(x);
+            double diff = Math.abs(original - read);
+
+            System.out.printf(Locale.US, "%-10.0f %-20.10f %-20.10f %-10.10f%n",
+                    x, original, read, diff);
         }
 
-        // Создаем Externalizable функцию
-        ArrayTabulatedFunctionExternalizable externalizableFunc =
-                new ArrayTabulatedFunctionExternalizable(points);
-
-        System.out.println("\n   Исходная функция (Externalizable, должна быть f(x) = x):");
-        printFunctionValues(externalizableFunc, 0, 10, 1);
-
-        // Сериализуем в файл
-        String externalizableFile = "externalizable_function.ser";
-        System.out.println("\n   Сериализация в файл: " + externalizableFile);
-
-        try (ObjectOutputStream out = new ObjectOutputStream(
-                new BufferedOutputStream(new FileOutputStream(externalizableFile)))) {
-            out.writeObject(externalizableFunc);
-            System.out.println("   Сериализация завершена успешно");
-        }
-
-        // Десериализуем из файла
-        System.out.println("   Десериализация из файла...");
-        ArrayTabulatedFunctionExternalizable deserializedFunc;
-
-        try (ObjectInputStream in = new ObjectInputStream(
-                new BufferedInputStream(new FileInputStream(externalizableFile)))) {
-            deserializedFunc = (ArrayTabulatedFunctionExternalizable) in.readObject();
-            System.out.println("   Десериализация завершена успешно");
-        }
-
-        System.out.println("   Прочитанная функция:");
-        printFunctionValues(deserializedFunc, 0, 10, 1);
-
-        // Сравниваем функции
-        System.out.println("\n   Сравнение исходной и десериализованной функций:");
-        compareFunctions(externalizableFunc, deserializedFunc, 0, 10, 1);
-
-        // Анализируем размер файла
-        File file = new File(externalizableFile);
-        System.out.println("\n   Анализ файла сериализации:");
-        System.out.println("   Размер файла: " + file.length() + " байт");
-
-        // Рассчитываем ожидаемый размер
-        int pointsCount = 11;
-        int expectedSize = 4 + 2 * pointsCount * 8; // int (4 байта) + pointsCount * (double + double) (8+8 байт)
-        System.out.println("   Ожидаемый размер: " + expectedSize + " байт (4 + 11*16 = 180)");
-
-        // Показываем начало файла в hex
-        System.out.println("   Первые 32 байта файла (hex):");
-        showFileHex(externalizableFile, 32);
-        System.out.println("   Первые 4 байта: 00 00 00 0B = 11 (количество точек)");
-        System.out.println("   Далее 16 байт на точку: 8 байт X + 8 байт Y");
-
-        // Удаляем временный файл
-        file.delete();
-        System.out.println("   Временный файл удален.");
-    }
-
-    /**
-     * Сравнение Serializable и Externalizable
-     */
-    private static void compareSerializationFormats() throws Exception {
-        System.out.println("   Сравнение двух подходов к сериализации:");
-
-        // Создаем тестовую функцию f(x) = x² на отрезке [0, 4] с 5 точками
-        System.out.println("\n   Тестовая функция: f(x) = x² на [0, 4] с 5 точками");
-        double[] xValues = {0.0, 1.0, 2.0, 3.0, 4.0};
-        double[] yValues = {0.0, 1.0, 4.0, 9.0, 16.0};
-
-        // Serializable версия
-        System.out.println("   1. Создание Serializable функции...");
-        TabulatedFunction serializableFunc =
-                TabulatedFunctions.createTabulatedFunction(xValues, yValues);
-
-        // Externalizable версия
-        System.out.println("   2. Создание Externalizable функции...");
-        FunctionPoint[] points = new FunctionPoint[xValues.length];
-        for (int i = 0; i < points.length; i++) {
-            points[i] = new FunctionPoint(xValues[i], yValues[i]);
-        }
-        ArrayTabulatedFunctionExternalizable externalizableFunc =
-                new ArrayTabulatedFunctionExternalizable(points);
-
-        // Проверяем, что функции эквивалентны
-        System.out.println("   3. Проверка эквивалентности функций:");
-        boolean areEqual = true;
-        for (double x = 0; x <= 4; x += 0.5) {
-            double v1 = serializableFunc.getFunctionValue(x);
-            double v2 = externalizableFunc.getFunctionValue(x);
-            if (Math.abs(v1 - v2) > 1e-10) {
-                areEqual = false;
-                System.out.printf("   Ошибка при x=%.1f: %.6f != %.6f%n", x, v1, v2);
-            }
-        }
-        if (areEqual) {
-            System.out.println("   ✓ Функции эквивалентны!");
-        }
-
-        // Сохраняем обе версии
-        String serFile = "compare_serializable.ser";
-        String extFile = "compare_externalizable.ser";
-
-        System.out.println("\n   4. Сериализация в файлы:");
-        System.out.println("   - Serializable: " + serFile);
-        System.out.println("   - Externalizable: " + extFile);
-
-        // Serializable
-        try (ObjectOutputStream out = new ObjectOutputStream(
-                new BufferedOutputStream(new FileOutputStream(serFile)))) {
-            out.writeObject(serializableFunc);
-        }
-
-        // Externalizable
-        try (ObjectOutputStream out = new ObjectOutputStream(
-                new BufferedOutputStream(new FileOutputStream(extFile)))) {
-            out.writeObject(externalizableFunc);
-        }
-
-        // Сравниваем размеры
-        File ser = new File(serFile);
-        File ext = new File(extFile);
-
-        System.out.println("\n   5. Сравнение размеров файлов:");
-        System.out.println("   - Serializable:   " + ser.length() + " байт");
-        System.out.println("   - Externalizable: " + ext.length() + " байт");
-
-        double ratio = (double)ser.length() / ext.length();
-        System.out.println("   Externalizable в " +
-                String.format("%.2f", ratio) +
-                " раз компактнее!");
-
-        // Анализируем содержимое
-        System.out.println("\n   6. Анализ содержимого файлов:");
-
-        System.out.println("   Serializable файл (первые 64 байта):");
-        showFileHex(serFile, 64);
-        System.out.println("   Содержит: магическое число Java + полное имя класса + метаданные + данные");
-
-        System.out.println("\n   Externalizable файл (первые 64 байта):");
-        showFileHex(extFile, 64);
-        System.out.println("   Содержит: магическое число Java + полное имя класса + только данные");
-
-        // Десериализуем и проверяем
-        System.out.println("\n   7. Десериализация и проверка:");
-
-        // Serializable
-        TabulatedFunction serDeserialized;
-        try (ObjectInputStream in = new ObjectInputStream(
-                new BufferedInputStream(new FileInputStream(serFile)))) {
-            serDeserialized = (TabulatedFunction) in.readObject();
-            System.out.println("   Serializable: десериализация успешна");
-        }
-
-        // Externalizable
-        ArrayTabulatedFunctionExternalizable extDeserialized;
-        try (ObjectInputStream in = new ObjectInputStream(
-                new BufferedInputStream(new FileInputStream(extFile)))) {
-            extDeserialized = (ArrayTabulatedFunctionExternalizable) in.readObject();
-            System.out.println("   Externalizable: десериализация успешна");
-        }
-
-        // Проверяем корректность
-        boolean serCorrect = true;
-        boolean extCorrect = true;
-        for (double x = 0; x <= 4; x += 1) {
-            double original = x * x;
-            double serValue = serDeserialized.getFunctionValue(x);
-            double extValue = extDeserialized.getFunctionValue(x);
-
-            if (Math.abs(serValue - original) > 1e-10) serCorrect = false;
-            if (Math.abs(extValue - original) > 1e-10) extCorrect = false;
-        }
-
-        System.out.println("   Serializable корректна: " + (serCorrect ? "✓ ДА" : "✗ НЕТ"));
-        System.out.println("   Externalizable корректна: " + (extCorrect ? "✓ ДА" : "✗ НЕТ"));
-
-        // Выводы
-        System.out.println("\n   8. Выводы о подходах к сериализации:");
-        System.out.println("   SERIALIZABLE (автоматическая сериализация):");
-        System.out.println("   + Простота: implements Serializable - и всё готово");
-        System.out.println("   + Сериализует ВСЕ поля автоматически");
-        System.out.println("   + Сериализует граф объектов (вложенные объекты)");
-        System.out.println("   + Контроль версий через serialVersionUID");
-        System.out.println("   - Больший размер файла (метаданные классов, имена полей)");
-        System.out.println("   - Медленнее (использует рефлексию)");
-        System.out.println("   - Сериализует ВСЕ поля (даже transient)");
-        System.out.println("   - Менее гибкий");
-
-        System.out.println("\n   EXTERNALIZABLE (ручная сериализация):");
-        System.out.println("   + Полный контроль над процессом сериализации");
-        System.out.println("   + Компактный размер (только нужные данные)");
-        System.out.println("   + Быстрее (нет рефлексии)");
-        System.out.println("   + Можно сериализовать только нужные данные");
-        System.out.println("   + Независимость от внутренней структуры класса");
-        System.out.println("   - Требует написания кода (readExternal/writeExternal)");
-        System.out.println("   - Необходим public конструктор по умолчанию");
-        System.out.println("   - Не сериализует автоматически граф объектов");
-        System.out.println("   - Легко допустить ошибку (несимметричные read/write)");
-        System.out.println("   - Ответственность за версионность на разработчике");
-
-        System.out.println("\n   9. Рекомендации:");
-        System.out.println("   - Использовать Serializable для:");
-        System.out.println("     * Простых классов");
-        System.out.println("     * Когда не критичен размер файла");
-        System.out.println("     * Для быстрого прототипирования");
-        System.out.println("     * Когда важна простота поддержки");
-
-        System.out.println("   - Использовать Externalizable для:");
-        System.out.println("     * Классов с большим количеством данных");
-        System.out.println("     * Когда критична производительность");
-        System.out.println("     * Для форматов обмена данными");
-        System.out.println("     * Когда нужен полный контроль");
-        System.out.println("     * Для legacy-систем или специфичных форматов");
-
-        System.out.println("\n   10. В нашем случае (табулированные функции):");
-        System.out.println("   - Externalizable предпочтительнее:");
-        System.out.println("     * Меньший размер файла (в 2.7 раза)");
-        System.out.println("     * Быстрее сериализация/десериализация");
-        System.out.println("     * Понятный бинарный формат (легко читать другими программами)");
-        System.out.println("     * Не зависит от внутренней реализации ArrayTabulatedFunction");
-
-        // Удаляем временные файлы
-        ser.delete();
-        ext.delete();
-        System.out.println("\n   Временные файлы удалены.");
-    }
-
-    /**
-     * Вспомогательный метод для вывода значений функции
-     */
-    private static void printFunctionValues(TabulatedFunction func,
-                                            double from, double to, double step) {
-        System.out.println("   x       f(x)");
-        System.out.println("   ------------");
-
-        for (double x = from; x <= to + 0.0001; x += step) {
-            double value = func.getFunctionValue(x);
-            System.out.printf("   %2.0f   %8.4f%n", x, value);
-        }
-    }
-
-    /**
-     * Вспомогательный метод для сравнения двух функций
-     */
-    private static void compareFunctions(TabulatedFunction f1, TabulatedFunction f2,
-                                         double from, double to, double step) {
-        System.out.println("   x       f1(x)     f2(x)     разница");
-        System.out.println("   -----------------------------------");
-
-        boolean allMatch = true;
-        double maxDiff = 0;
-
-        for (double x = from; x <= to + 0.0001; x += step) {
-            double v1 = f1.getFunctionValue(x);
-            double v2 = f2.getFunctionValue(x);
-            double diff = Math.abs(v1 - v2);
-            maxDiff = Math.max(maxDiff, diff);
-
-            if (diff > 1e-10) {
-                allMatch = false;
-            }
-
-            System.out.printf("   %2.0f   %8.4f   %8.4f   %9.6f%n",
-                    x, v1, v2, diff);
-        }
-
-        if (allMatch) {
-            System.out.println("   ✓ Все значения совпадают!");
-        } else {
-            System.out.println("   ✗ Есть различия в значениях");
-        }
-        System.out.printf("   Максимальная разница: %.6f%n", maxDiff);
-    }
-
-    /**
-     * Вспомогательный метод для показа файла в hex
-     */
-    private static void showFileHex(String filename, int bytesToShow) throws IOException {
-        try (FileInputStream in = new FileInputStream(filename)) {
-            byte[] buffer = new byte[bytesToShow];
-            int bytesRead = in.read(buffer);
-
-            System.out.print("   ");
+        // Изучаем содержимое бинарного файла
+        System.out.println("\nРазмер бинарного файла: " + new File(filename2).length() + " байт");
+        System.out.println("Первые 50 байт файла в HEX:");
+        try (FileInputStream fis = new FileInputStream(filename2)) {
+            byte[] buffer = new byte[50];
+            int bytesRead = fis.read(buffer);
             for (int i = 0; i < bytesRead; i++) {
                 System.out.printf("%02X ", buffer[i]);
-                if ((i + 1) % 16 == 0 && i < bytesRead - 1) {
-                    System.out.print("\n   ");
-                }
+                if ((i + 1) % 16 == 0) System.out.println();
             }
             System.out.println();
         }
+
+        System.out.println("\n=== ВЫВОДЫ ===");
+        System.out.println("1. Текстовый формат (writeTabulatedFunction):");
+        System.out.println("   + Понятен для чтения человеком");
+        System.out.println("   + Легко редактировать");
+        System.out.println("   - Больший размер файла");
+        System.out.println("   - Медленнее в обработке");
+        System.out.println("   - Точность может теряться при записи/чтении строк");
+
+        System.out.println("\n2. Бинарный формат (outputTabulatedFunction):");
+        System.out.println("   + Компактный размер");
+        System.out.println("   + Быстрее запись/чтение");
+        System.out.println("   + Точное сохранение чисел");
+        System.out.println("   - Нечитаем для человека");
+        System.out.println("   - Проблемы с переносимостью между разными архитектурами");
+        System.out.println("   - Сложнее отлаживать");
+    }
+
+    private static void testSerialization() throws IOException, ClassNotFoundException {
+        System.out.println("\n6.1. Сериализация с использованием Serializable:");
+        System.out.println("-----------------------------------------------");
+
+        // Создаем композицию: ln(exp(x)) = x
+        Exp expFunc = new Exp();
+        Log lnFunc = new Log(Math.E);
+
+        // Создаем табулированную функцию композиции
+        Function composition = Functions.composition(lnFunc, expFunc);
+        TabulatedFunction tabulated = TabulatedFunctions.tabulate(composition, 0, 10, 11);
+
+        // Сериализуем с Serializable
+        String serializableFile = "function_serializable.ser";
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(serializableFile))) {
+            oos.writeObject(tabulated);
+        }
+
+        System.out.println("Объект сериализован в файл: " + serializableFile);
+
+        // Десериализуем
+        TabulatedFunction deserialized;
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(serializableFile))) {
+            deserialized = (TabulatedFunction) ois.readObject();
+        }
+
+        System.out.println("\nСравнение исходной и десериализованной функции (ln(exp(x)) = x):");
+        System.out.printf("%-10s %-20s %-20s %-10s%n",
+                "x", "исходная", "десериализ.", "разница");
+        System.out.println("----------------------------------------------------------------");
+
+        for (double x = 0; x <= 10; x += 1) {
+            double original = tabulated.getFunctionValue(x);
+            double restored = deserialized.getFunctionValue(x);
+            double diff = Math.abs(original - restored);
+
+            System.out.printf(Locale.US, "%-10.0f %-20.10f %-20.10f %-10.10f%n",
+                    x, original, restored, diff);
+        }
+
+        // Анализ файла Serializable
+        File serializable = new File(serializableFile);
+        System.out.println("\nРазмер файла Serializable: " + serializable.length() + " байт");
+        System.out.println("Первые 100 байт файла в HEX:");
+        try (FileInputStream fis = new FileInputStream(serializable)) {
+            byte[] buffer = new byte[100];
+            int bytesRead = fis.read(buffer);
+            for (int i = 0; i < bytesRead; i++) {
+                System.out.printf("%02X ", buffer[i]);
+                if ((i + 1) % 16 == 0) System.out.println();
+            }
+            System.out.println();
+        }
+
+        System.out.println("\n6.2. Сериализация с использованием Externalizable:");
+        System.out.println("--------------------------------------------------");
+
+        // Создаем объект с Externalizable (нужен специальный класс)
+        // Предположим, что у нас есть ArrayTabulatedFunctionExternalizable
+        TabulatedFunction extFunc = createExternalizableFunction();
+
+        String externalizableFile = "function_externalizable.ext";
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(externalizableFile))) {
+            oos.writeObject(extFunc);
+        }
+
+        System.out.println("Объект Externalizable сериализован в файл: " + externalizableFile);
+
+        // Десериализуем
+        TabulatedFunction deserializedExt;
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(externalizableFile))) {
+            deserializedExt = (TabulatedFunction) ois.readObject();
+        }
+
+        // Анализ файла Externalizable
+        File externalizable = new File(externalizableFile);
+        System.out.println("\nРазмер файла Externalizable: " + externalizable.length() + " байт");
+
+        // Сравнение размеров
+        System.out.println("\n=== СРАВНЕНИЕ СЕРИАЛИЗАЦИИ ===");
+        System.out.println("Serializable: " + serializable.length() + " байт");
+        System.out.println("Externalizable: " + externalizable.length() + " байт");
+
+        System.out.println("\nПреимущества Serializable:");
+        System.out.println("1. Проще в реализации - автоматическая сериализация");
+        System.out.println("2. Не нужно писать код read/writeExternal");
+        System.out.println("3. Автоматически обрабатывает изменения в классе");
+        System.out.println("4. Сериализует всю иерархию наследования");
+
+        System.out.println("\nНедостатки Serializable:");
+        System.out.println("1. Больший размер файла (метаданные, версия класса)");
+        System.out.println("2. Медленнее");
+        System.out.println("3. Меньше контроля над процессом");
+        System.out.println("4. Проблемы с версионированием");
+
+        System.out.println("\nПреимущества Externalizable:");
+        System.out.println("1. Полный контроль над процессом сериализации");
+        System.out.println("2. Меньший размер файла (только нужные данные)");
+        System.out.println("3. Быстрее");
+        System.out.println("4. Легче обрабатывать изменения версий");
+
+        System.out.println("\nНедостатки Externalizable:");
+        System.out.println("1. Нужно писать свой код сериализации");
+        System.out.println("2. Нужно обрабатывать все поля вручную");
+        System.out.println("3. Сложнее поддерживать");
+        System.out.println("4. Не сериализует автоматически суперклассы");
+
+        // Удаляем временные файлы
+        serializable.delete();
+        externalizable.delete();
+        new File("exp_function.txt").delete();
+        new File("ln_function.bin").delete();
+
+        System.out.println("\nВременные файлы удалены.");
+    }
+
+    private static TabulatedFunction createExternalizableFunction() {
+        // Создаем простую табулированную функцию для теста
+        // В реальности нужно использовать ваш класс ArrayTabulatedFunctionExternalizable
+        Exp expFunc = new Exp();
+        return TabulatedFunctions.tabulate(expFunc, 0, 5, 6);
     }
 }
